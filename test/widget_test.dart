@@ -1,6 +1,9 @@
 import 'package:finance_tracker/app.dart';
+import 'package:finance_tracker/core/navigation/launch_location.dart';
+import 'package:finance_tracker/core/theme/theme_preference.dart';
 import 'package:finance_tracker/core/time/clock.dart';
 import 'package:finance_tracker/data/memory_ledger_repository.dart';
+import 'package:finance_tracker/features/settings/domain/app_settings.dart';
 import 'package:finance_tracker/state/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +53,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Send to Mum'), findsOneWidget);
     expect(find.text('Market run'), findsNothing);
+    await tester.enterText(
+      find.byKey(const Key('transaction-search')),
+      'zzzz-not-a-note',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Nothing matches'), findsOneWidget);
+  });
+
+  testWidgets('activity filters include a date range', (tester) async {
+    await pumpKobo(tester);
+    tester.view.physicalSize = const Size(800, 900);
+    await tester.tap(find.text('Activity'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filters'));
+    await tester.pumpAndSettle();
+    expect(find.text('From'), findsOneWidget);
+    expect(find.text('To'), findsOneWidget);
+    expect(find.text('Any date'), findsNWidgets(2));
+    expect(find.text('Apply'), findsOneWidget);
   });
 
   testWidgets('budgets screen shows food over the monthly limit', (
@@ -81,5 +103,71 @@ void main() {
     await tester.pumpAndSettle();
     final context = tester.element(find.text('Appearance'));
     expect(Theme.of(context).brightness, Brightness.dark);
+    await tester.scrollUntilVisible(find.text('Restore demo ledger'), 200);
+    await tester.tap(find.text('Restore demo ledger'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restore demo ledger?'), findsOneWidget);
+    expect(find.text('Restore'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('an empty book explains what to add', (tester) async {
+    final repo = MemoryLedgerRepository();
+    await repo.saveSettings(const AppSettings(seeded: true));
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          repositoryProvider.overrideWithValue(repo),
+          clockProvider.overrideWithValue(FixedClock(today)),
+        ],
+        child: const KoboApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No spending yet'), findsOneWidget);
+    await tester.tap(find.text('Activity'));
+    await tester.pumpAndSettle();
+    expect(find.text('No transactions yet'), findsOneWidget);
+    await tester.tap(find.text('Budgets'));
+    await tester.pumpAndSettle();
+    expect(find.text('No budgets yet'), findsOneWidget);
+    await tester.tap(find.text('Accounts'));
+    await tester.pumpAndSettle();
+    expect(find.text('No accounts yet'), findsOneWidget);
+  });
+
+  testWidgets('a launch location opens that tab in the requested theme', (
+    tester,
+  ) async {
+    final repo = MemoryLedgerRepository();
+    await repo.ensureSeeded(today);
+    await repo.materializeRecurring(today);
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          repositoryProvider.overrideWithValue(repo),
+          clockProvider.overrideWithValue(FixedClock(today)),
+          launchLocationProvider.overrideWithValue(
+            const LaunchLocation(tab: 2, themeOverride: ThemePreference.dark),
+          ),
+        ],
+        child: const KoboApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('November 2026'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text('November 2026'))).brightness,
+      Brightness.dark,
+    );
   });
 }

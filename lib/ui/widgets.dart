@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/formatting/money_format.dart';
 import 'theme/app_theme.dart';
 
+/// A titled card used by the dashboard sections.
 class SectionCard extends StatelessWidget {
   const SectionCard({
     required this.title,
@@ -17,9 +18,7 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -44,6 +43,7 @@ class SectionCard extends StatelessWidget {
   }
 }
 
+/// An amount in minor units, formatted for [currency].
 class MoneyText extends StatelessWidget {
   const MoneyText(
     this.minor,
@@ -67,6 +67,7 @@ class MoneyText extends StatelessWidget {
   }
 }
 
+/// A label and a value, used in the dashboard summary row.
 class StatTile extends StatelessWidget {
   const StatTile({
     required this.label,
@@ -81,9 +82,7 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,5 +104,59 @@ class StatTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// A short explanation for a screen or chart with nothing to show.
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    required this.icon,
+    required this.title,
+    this.message,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppColors.mutedOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 36, color: muted),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          if (message != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              message!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: muted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Validation message under a form field.
+class FieldError extends StatelessWidget {
+  const FieldError(this.message, {super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(message, style: const TextStyle(color: AppColors.expense));
   }
 }

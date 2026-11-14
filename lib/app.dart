@@ -5,6 +5,7 @@ import 'state/providers.dart';
 import 'ui/shell/app_shell.dart';
 import 'ui/theme/app_theme.dart';
 
+/// Root widget. The shell waits on the ledger and picks the theme.
 class KoboApp extends ConsumerWidget {
   const KoboApp({super.key});
 

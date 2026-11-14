@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../features/accounts/domain/account.dart';
 
+/// Icon for a category [key]. Unknown keys use a generic glyph.
 IconData categoryIcon(String key) {
   return switch (key) {
     'food' => Icons.restaurant_outlined,
@@ -21,6 +22,7 @@ IconData categoryIcon(String key) {
   };
 }
 
+/// Icon for an [AccountKind].
 IconData accountKindIcon(AccountKind kind) {
   return switch (kind) {
     AccountKind.cash => Icons.payments_outlined,

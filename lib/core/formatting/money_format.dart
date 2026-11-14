@@ -43,6 +43,12 @@ String formatCompactMinor(int minor, String currencyCode) {
   return formatMinor(minor, currencyCode);
 }
 
+/// Axis label. Zero stays `₦0`, so a scale does not spend width on `.00`.
+String formatAxisAmount(int minor, String currencyCode) {
+  if (minor == 0) return '${Currencies.symbolFor(currencyCode)}0';
+  return formatCompactMinor(minor, currencyCode);
+}
+
 String _trimZero(String digits) {
   if (digits.endsWith('.0')) return digits.substring(0, digits.length - 2);
   return digits;
@@ -76,6 +82,20 @@ int? parseMoneyInput(String input, {bool allowZero = false}) {
   return minor;
 }
 
+/// Major-unit text for an amount field. Whole amounts omit the decimals.
+///
+/// `160000` is `1600`. `160050` is `1600.50`. A negative value keeps the sign.
+String formatEditableAmount(int minor) {
+  final negative = minor < 0;
+  final absolute = minor.abs();
+  final major = absolute ~/ 100;
+  final fraction = absolute % 100;
+  final digits = fraction == 0
+      ? '$major'
+      : '$major.${fraction.toString().padLeft(2, '0')}';
+  return negative ? '-$digits' : digits;
+}
+
 const List<String> _shortMonths = <String>[
   'Jan',
   'Feb',
@@ -106,16 +126,20 @@ const List<String> _longMonths = <String>[
   'December',
 ];
 
+/// `14 Nov 2026`.
 String formatShortDate(DateTime date) {
   return '${date.day} ${_shortMonths[date.month - 1]} ${date.year}';
 }
 
+/// `November 2026`.
 String formatMonthYear(int year, int month) {
   return '${_longMonths[month - 1]} $year';
 }
 
+/// `Nov` for month 11.
 String formatShortMonth(int month) => _shortMonths[month - 1];
 
+/// Groups a non-negative integer with thousands separators.
 String groupThousands(int major) {
   final digits = major.toString();
   final buffer = StringBuffer();

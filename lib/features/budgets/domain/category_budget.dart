@@ -1,3 +1,4 @@
+/// A monthly spending limit for one expense category.
 class CategoryBudget {
   const CategoryBudget({
     required this.id,

@@ -70,7 +70,10 @@ class DriftLedgerRepository implements LedgerRepository {
       existingIds: current.transactions.map((txn) => txn.id).toSet(),
       until: today,
     );
-    final moved = _rulesMoved(current.rules, posting.rules);
+    final moved = RecurringSchedule.materializationChanged(
+      current.rules,
+      posting.rules,
+    );
     if (posting.created.isEmpty && !moved) return;
     await _db.transaction(() async {
       for (final txn in posting.created) {
@@ -205,17 +208,6 @@ class DriftLedgerRepository implements LedgerRepository {
       }
       await _db.into(_db.settingsRows).insert(_settingsTo(snapshot.settings));
     });
-  }
-
-  bool _rulesMoved(List<RecurringRule> current, List<RecurringRule> next) {
-    if (current.length != next.length) return true;
-    for (var i = 0; i < current.length; i++) {
-      if (current[i].id != next[i].id) return true;
-      if (current[i].lastMaterializedOn != next[i].lastMaterializedOn) {
-        return true;
-      }
-    }
-    return false;
   }
 }
 

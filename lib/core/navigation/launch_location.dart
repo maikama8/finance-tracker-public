@@ -1,6 +1,6 @@
 import '../theme/theme_preference.dart';
 
-/// Where the web app should open, from the URL hash.
+/// Tab and optional theme requested by the URL hash.
 class LaunchLocation {
   const LaunchLocation({required this.tab, this.themeOverride});
 
@@ -10,6 +10,9 @@ class LaunchLocation {
   static const home = LaunchLocation(tab: 0);
 }
 
+/// Reads a location such as `/activity` or `/dashboard?theme=dark`.
+///
+/// Unknown paths open Home. An unknown theme query is ignored.
 LaunchLocation parseLaunchLocation(String location) {
   final raw = location.isEmpty ? '/' : location;
   final uri = Uri.parse(raw.startsWith('/') ? raw : '/$raw');
@@ -28,6 +31,7 @@ LaunchLocation parseLaunchLocation(String location) {
   return LaunchLocation(tab: tab, themeOverride: theme);
 }
 
+/// Hash path for a shell tab. Indexes other than 1 to 4 are the dashboard.
 String pathForTab(int tab) {
   return switch (tab) {
     1 => '/activity',

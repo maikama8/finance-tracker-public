@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../ui/icons.dart';
 import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets.dart';
 import '../domain/ledger_report.dart';
+import 'chart_scale.dart';
 
+/// Donut of this month's spending, with a row for each category.
 class SpendingPie extends StatelessWidget {
   const SpendingPie({
     required this.spending,
@@ -19,12 +22,14 @@ class SpendingPie extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (spending.isEmpty) {
-      return const Text('No spending in this month yet.');
+      return const EmptyState(
+        icon: Icons.donut_large_outlined,
+        title: 'No spending yet',
+        message: 'Expenses this month will show up here.',
+      );
     }
     final total = spending.fold<int>(0, (sum, item) => sum + item.spentMinor);
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return Column(
       children: <Widget>[
         SizedBox(
@@ -84,6 +89,7 @@ class SpendingPie extends StatelessWidget {
   }
 }
 
+/// Six months of income and spending. Transfers are not included.
 class CashFlowChart extends StatelessWidget {
   const CashFlowChart({required this.trend, required this.currency, super.key});
 
@@ -92,27 +98,29 @@ class CashFlowChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (trend.isEmpty) return const SizedBox.shrink();
+    if (trend.isEmpty) {
+      return const EmptyState(
+        icon: Icons.bar_chart_outlined,
+        title: 'No cash flow yet',
+      );
+    }
     var peak = 0;
     for (final month in trend) {
       if (month.incomeMinor > peak) peak = month.incomeMinor;
       if (month.expenseMinor > peak) peak = month.expenseMinor;
     }
-    final maxY = peak == 0 ? 1.0 : peak / 100 * 1.25;
-    final interval = maxY / 3;
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final scale = ChartScale.fromZero(peak / 100);
+    final muted = AppColors.mutedOf(context);
     return SizedBox(
       height: 200,
       child: BarChart(
         BarChartData(
-          maxY: maxY,
-          minY: 0,
+          maxY: scale.max,
+          minY: scale.min,
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: interval,
+            horizontalInterval: scale.step,
             getDrawingHorizontalLine: (value) =>
                 FlLine(color: Theme.of(context).dividerColor, strokeWidth: 1),
           ),
@@ -128,11 +136,11 @@ class CashFlowChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 48,
-                interval: interval,
+                reservedSize: 56,
+                interval: scale.step,
                 getTitlesWidget: (value, meta) {
                   return Text(
-                    formatCompactMinor((value * 100).round(), currency),
+                    _tickLabel(value, scale, currency),
                     style: TextStyle(color: muted, fontSize: 10),
                   );
                 },
@@ -190,6 +198,7 @@ class CashFlowChart extends StatelessWidget {
   }
 }
 
+/// Net worth across the same six months as [CashFlowChart].
 class NetWorthChart extends StatelessWidget {
   const NetWorthChart({
     required this.points,
@@ -202,36 +211,33 @@ class NetWorthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (points.length < 2) return const Text('Not enough history yet.');
+    if (points.length < 2) {
+      return const EmptyState(
+        icon: Icons.show_chart,
+        title: 'Not enough history yet',
+      );
+    }
     var minMinor = points.first.minor;
     var maxMinor = points.first.minor;
     for (final point in points) {
       if (point.minor < minMinor) minMinor = point.minor;
       if (point.minor > maxMinor) maxMinor = point.minor;
     }
-    final padding = ((maxMinor - minMinor).abs() * 0.15)
-        .round()
-        .clamp(100, 1 << 30)
-        .toInt();
-    final minY = (minMinor - padding) / 100;
-    final maxY = (maxMinor + padding) / 100;
-    final interval = (maxY - minY) / 3;
+    final scale = ChartScale.around(minMinor / 100, maxMinor / 100);
     final color = Theme.of(context).colorScheme.primary;
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return SizedBox(
       height: 200,
       child: LineChart(
         LineChartData(
-          minY: minY,
-          maxY: maxY,
+          minY: scale.min,
+          maxY: scale.max,
           minX: 0,
           maxX: (points.length - 1).toDouble(),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: interval == 0 ? 1 : interval,
+            horizontalInterval: scale.step,
             getDrawingHorizontalLine: (value) =>
                 FlLine(color: Theme.of(context).dividerColor, strokeWidth: 1),
           ),
@@ -247,11 +253,11 @@ class NetWorthChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 52,
-                interval: interval == 0 ? 1 : interval,
+                reservedSize: 56,
+                interval: scale.step,
                 getTitlesWidget: (value, meta) {
                   return Text(
-                    formatCompactMinor((value * 100).round(), currency),
+                    _tickLabel(value, scale, currency),
                     style: TextStyle(color: muted, fontSize: 10),
                   );
                 },
@@ -301,4 +307,14 @@ class NetWorthChart extends StatelessWidget {
       ),
     );
   }
+}
+
+String _tickLabel(double value, ChartScale scale, String currency) {
+  if (scale.step <= 0) return '';
+  final index = ((value - scale.min) / scale.step).round();
+  final tick = scale.min + index * scale.step;
+  if ((tick - value).abs() > scale.step * 0.01) return '';
+  if (tick < scale.min - scale.step * 0.01) return '';
+  if (tick > scale.max + scale.step * 0.01) return '';
+  return formatAxisAmount((tick * 100).round(), currency);
 }

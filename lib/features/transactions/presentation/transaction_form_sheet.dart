@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/time/iso_date.dart';
 import '../../../state/providers.dart';
-import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets.dart';
 import '../domain/category.dart';
 import '../domain/ledger_transaction.dart';
 import '../domain/recurring_rule.dart';
 
+/// Opens the sheet for a new posting, or for [existing].
 Future<void> showTransactionForm(
   BuildContext context, {
   LedgerTransaction? existing,
@@ -22,6 +23,7 @@ Future<void> showTransactionForm(
   );
 }
 
+/// Create or edit one posting. A new posting can also start a rule.
 class TransactionFormSheet extends ConsumerStatefulWidget {
   const TransactionFormSheet({this.existing, super.key});
 
@@ -49,7 +51,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     super.initState();
     final existing = widget.existing;
     _amount = TextEditingController(
-      text: existing == null ? '' : _majorText(existing.amountMinor),
+      text: existing == null ? '' : formatEditableAmount(existing.amountMinor),
     );
     _note = TextEditingController(text: existing?.note ?? '');
     _kind = existing?.kind ?? TransactionKind.expense;
@@ -269,7 +271,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               ),
             if (_error != null) ...<Widget>[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: AppColors.expense)),
+              FieldError(_error!),
             ],
             const SizedBox(height: 16),
             FilledButton(
@@ -368,11 +370,4 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     if (!mounted) return;
     Navigator.pop(context);
   }
-}
-
-String _majorText(int minor) {
-  final major = minor ~/ 100;
-  final fraction = minor % 100;
-  if (fraction == 0) return '$major';
-  return '$major.${fraction.toString().padLeft(2, '0')}';
 }

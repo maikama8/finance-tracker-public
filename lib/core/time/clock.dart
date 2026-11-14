@@ -12,6 +12,7 @@ abstract class Clock {
   DateTime today() => dateOnly(now());
 }
 
+/// [Clock] backed by [DateTime.now].
 class SystemClock extends Clock {
   const SystemClock();
 
@@ -19,6 +20,7 @@ class SystemClock extends Clock {
   DateTime now() => DateTime.now();
 }
 
+/// [Clock] that always reports [instant]. Tests use it to pin the open month.
 class FixedClock extends Clock {
   const FixedClock(this.instant);
 

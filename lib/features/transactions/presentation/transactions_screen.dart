@@ -6,11 +6,13 @@ import '../../../core/time/iso_date.dart';
 import '../../../state/providers.dart';
 import '../../../ui/icons.dart';
 import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets.dart';
 import '../domain/ledger_transaction.dart';
 import '../domain/recurring_rule.dart';
 import '../domain/transaction_query.dart';
 import 'transaction_form_sheet.dart';
 
+/// Searchable list of postings, grouped by day, plus the repeating rules.
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
 
@@ -74,11 +76,7 @@ class TransactionsScreen extends ConsumerWidget {
                 selected: query.kind,
               ),
               ActionChip(
-                label: Text(
-                  query.accountId == null && query.categoryId == null
-                      ? 'Filters'
-                      : 'Filters on',
-                ),
+                label: Text(query.hasFacet ? 'Filters on' : 'Filters'),
                 avatar: const Icon(Icons.tune, size: 18),
                 onPressed: () => _showFilters(context, ref),
               ),
@@ -108,7 +106,19 @@ class TransactionsScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         Expanded(
           child: visible.isEmpty
-              ? const Center(child: Text('No transactions match.'))
+              ? Center(
+                  child: EmptyState(
+                    icon: query.isNarrowed
+                        ? Icons.search_off
+                        : Icons.receipt_long_outlined,
+                    title: query.isNarrowed
+                        ? 'Nothing matches'
+                        : 'No transactions yet',
+                    message: query.isNarrowed
+                        ? 'Try a different note, account, or date.'
+                        : 'Add income, an expense, or a transfer.',
+                  ),
+                )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 88),
                   itemCount: visible.length,
@@ -145,6 +155,7 @@ class TransactionsScreen extends ConsumerWidget {
     final ledger = ref.read(ledgerProvider).asData?.value;
     if (ledger == null) return;
     var query = ref.read(transactionQueryProvider);
+    final today = ref.read(clockProvider).today();
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -152,86 +163,157 @@ class TransactionsScreen extends ConsumerWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final bottom = MediaQuery.viewInsetsOf(context).bottom;
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  DropdownButtonFormField<String?>(
-                    isExpanded: true,
-                    initialValue: query.accountId,
-                    decoration: const InputDecoration(labelText: 'Account'),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('Any account'),
-                      ),
-                      for (final account in ledger.accounts)
-                        DropdownMenuItem<String?>(
-                          value: account.id,
-                          child: Text(account.name),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + bottom),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    DropdownButtonFormField<String?>(
+                      isExpanded: true,
+                      initialValue: query.accountId,
+                      decoration: const InputDecoration(labelText: 'Account'),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Any account'),
                         ),
-                    ],
-                    onChanged: (value) => setState(() {
-                      query = query.copyWith(
-                        accountId: value,
-                        clearAccount: value == null,
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
-                    isExpanded: true,
-                    initialValue: query.categoryId,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('Any category'),
+                        for (final account in ledger.accounts)
+                          DropdownMenuItem<String?>(
+                            value: account.id,
+                            child: Text(account.name),
+                          ),
+                      ],
+                      onChanged: (value) => setState(() {
+                        query = query.copyWith(
+                          accountId: value,
+                          clearAccount: value == null,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('From'),
+                      subtitle: Text(
+                        query.from == null
+                            ? 'Any date'
+                            : formatShortDate(query.from!),
                       ),
-                      for (final category in ledger.categories)
-                        DropdownMenuItem<String?>(
-                          value: category.id,
-                          child: Text(category.name),
+                      trailing: query.from == null
+                          ? const Icon(Icons.calendar_today_outlined)
+                          : IconButton(
+                              tooltip: 'Clear start date',
+                              onPressed: () => setState(
+                                () => query = query.copyWith(clearFrom: true),
+                              ),
+                              icon: const Icon(Icons.close),
+                            ),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: query.from ?? today,
+                          firstDate: DateTime.utc(2000),
+                          lastDate: DateTime.utc(2100),
+                        );
+                        if (picked == null) return;
+                        setState(
+                          () => query = query.copyWith(from: dateOnly(picked)),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('To'),
+                      subtitle: Text(
+                        query.to == null
+                            ? 'Any date'
+                            : formatShortDate(query.to!),
+                      ),
+                      trailing: query.to == null
+                          ? const Icon(Icons.calendar_today_outlined)
+                          : IconButton(
+                              tooltip: 'Clear end date',
+                              onPressed: () => setState(
+                                () => query = query.copyWith(clearTo: true),
+                              ),
+                              icon: const Icon(Icons.close),
+                            ),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: query.to ?? today,
+                          firstDate: DateTime.utc(2000),
+                          lastDate: DateTime.utc(2100),
+                        );
+                        if (picked == null) return;
+                        setState(
+                          () => query = query.copyWith(to: dateOnly(picked)),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      isExpanded: true,
+                      initialValue: query.categoryId,
+                      decoration: const InputDecoration(labelText: 'Category'),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Any category'),
                         ),
-                    ],
-                    onChanged: (value) => setState(() {
-                      query = query.copyWith(
-                        categoryId: value,
-                        clearCategory: value == null,
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          ref
-                              .read(transactionQueryProvider.notifier)
-                              .update(
-                                query.copyWith(
-                                  clearAccount: true,
-                                  clearCategory: true,
-                                ),
-                              );
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Clear'),
-                      ),
-                      const Spacer(),
-                      FilledButton(
-                        onPressed: () {
-                          ref
-                              .read(transactionQueryProvider.notifier)
-                              .update(query);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Apply'),
-                      ),
-                    ],
-                  ),
-                ],
+                        for (final category in ledger.categories)
+                          DropdownMenuItem<String?>(
+                            value: category.id,
+                            child: Text(category.name),
+                          ),
+                      ],
+                      onChanged: (value) => setState(() {
+                        query = query.copyWith(
+                          categoryId: value,
+                          clearCategory: value == null,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            ref
+                                .read(transactionQueryProvider.notifier)
+                                .update(
+                                  query.copyWith(
+                                    clearAccount: true,
+                                    clearCategory: true,
+                                    clearFrom: true,
+                                    clearTo: true,
+                                  ),
+                                );
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Clear'),
+                        ),
+                        const Spacer(),
+                        FilledButton(
+                          // Form buttons stretch. A row cannot give this one
+                          // an infinite width, so it sizes to the label.
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                          ),
+                          onPressed: () {
+                            ref
+                                .read(transactionQueryProvider.notifier)
+                                .update(query);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -359,7 +441,10 @@ class _TransactionTile extends ConsumerWidget {
         color: category == null ? null : Color(category.color),
       ),
       title: Text(current.note.isEmpty ? current.kind.label : current.note),
-      subtitle: Text(account?.name ?? ''),
+      subtitle: Text(
+        account?.name ?? '',
+        style: TextStyle(color: AppColors.mutedOf(context)),
+      ),
       trailing: Text(
         amount,
         style: TextStyle(color: color, fontWeight: FontWeight.w700),
