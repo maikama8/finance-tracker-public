@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/currency/currency.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../state/providers.dart';
+import '../../../ui/widgets.dart';
 import '../domain/account.dart';
 
+/// Opens the sheet for a new account, or the account with [accountId].
 Future<void> showAccountForm(BuildContext context, {String? accountId}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -16,6 +18,7 @@ Future<void> showAccountForm(BuildContext context, {String? accountId}) {
   );
 }
 
+/// Create or edit one account. Kind and currency stay put after it is saved.
 class AccountFormSheet extends ConsumerStatefulWidget {
   const AccountFormSheet({this.accountId, super.key});
 
@@ -41,7 +44,9 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     _name = TextEditingController(text: existing?.name ?? '');
     _institution = TextEditingController(text: existing?.institution ?? '');
     _opening = TextEditingController(
-      text: existing == null ? '' : _major(existing.openingBalanceMinor),
+      text: existing == null
+          ? ''
+          : formatEditableAmount(existing.openingBalanceMinor),
     );
     _kind = existing?.kind ?? AccountKind.bank;
     _currency =
@@ -139,7 +144,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
             ],
             if (_error != null) ...<Widget>[
               const SizedBox(height: 8),
-              Text(_error!),
+              FieldError(_error!),
             ],
             const SizedBox(height: 16),
             FilledButton(
@@ -170,9 +175,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
                   createdAt:
                       existing?.createdAt ?? ref.read(clockProvider).now(),
                 );
-                await ref
-                    .read(ledgerProvider.notifier)
-                    .saveAccount(account, isNew: existing == null);
+                await ref.read(ledgerProvider.notifier).saveAccount(account);
                 if (!context.mounted) return;
                 Navigator.pop(context);
               },
@@ -209,11 +212,4 @@ int _colorFor(String name) {
     0xFF2A9D8F,
   ];
   return palette[(name.hashCode & 0x7fffffff) % palette.length];
-}
-
-String _major(int minor) {
-  final fraction = minor.abs() % 100;
-  final major = minor ~/ 100;
-  if (fraction == 0) return '$major';
-  return '$major.${fraction.toString().padLeft(2, '0')}';
 }

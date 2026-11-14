@@ -1,5 +1,7 @@
+/// What a posting does to the accounts it touches.
 enum TransactionKind { income, expense, transfer }
 
+/// Reads the kind stored on a transaction or a recurring rule.
 TransactionKind parseTransactionKind(String value) {
   return switch (value) {
     'income' => TransactionKind.income,

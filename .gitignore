@@ -46,3 +46,11 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Editor settings and local secrets
+.vscode/
+*.code-workspace
+.env
+.env.*
+*.env
+lcov.info

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../state/providers.dart';
 import '../domain/csv_ledger.dart';
 
+/// File type the export and import pickers accept.
 const XTypeGroup csvTypeGroup = XTypeGroup(
   label: 'CSV',
   extensions: <String>['csv'],
@@ -14,6 +15,7 @@ const XTypeGroup csvTypeGroup = XTypeGroup(
   webWildCards: <String>['text/csv', '.csv'],
 );
 
+/// Writes the open ledger to a CSV file the user picks.
 Future<void> exportLedger(
   WidgetRef ref,
   ScaffoldMessengerState messenger,
@@ -37,6 +39,7 @@ Future<void> exportLedger(
   );
 }
 
+/// Reads a CSV file and merges it into the open ledger.
 Future<void> importLedger(
   WidgetRef ref,
   ScaffoldMessengerState messenger,

@@ -1,5 +1,7 @@
+/// Income categories are not budgeted. Expense categories are.
 enum CategoryKind { income, expense }
 
+/// Reads the kind stored on a category row.
 CategoryKind parseCategoryKind(String value) {
   return switch (value) {
     'income' => CategoryKind.income,
@@ -15,6 +17,7 @@ extension CategoryKindLabel on CategoryKind {
   };
 }
 
+/// A label on income or spending. Transfers do not use one.
 class Category {
   const Category({
     required this.id,

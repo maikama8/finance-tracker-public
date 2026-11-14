@@ -5,9 +5,11 @@ import '../../../core/formatting/money_format.dart';
 import '../../../state/providers.dart';
 import '../../../ui/icons.dart';
 import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets.dart';
 import '../domain/budget_engine.dart';
 import 'budget_form_sheet.dart';
 
+/// Monthly limits, and how much of each one is already spent.
 class BudgetsScreen extends ConsumerWidget {
   const BudgetsScreen({super.key});
 
@@ -69,7 +71,13 @@ class BudgetsScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         Expanded(
           child: snapshots.isEmpty
-              ? const Center(child: Text('No budgets yet.'))
+              ? const Center(
+                  child: EmptyState(
+                    icon: Icons.pie_chart_outline,
+                    title: 'No budgets yet',
+                    message: 'Set a monthly limit for a spending category.',
+                  ),
+                )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                   itemCount: snapshots.length,

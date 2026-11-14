@@ -22,6 +22,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Format
+        run: find lib test -name '*.dart' ! -name '*.g.dart' -print0 | xargs -0 dart format --set-exit-if-changed --output=none
+
       - name: Analyze
         run: flutter analyze
 

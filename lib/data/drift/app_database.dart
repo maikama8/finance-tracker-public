@@ -15,6 +15,7 @@ part 'app_database.g.dart';
     SettingsRows,
   ],
 )
+/// SQLite database for one ledger. Schema version 1.
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? openKoboDatabase());
@@ -23,6 +24,11 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 }
 
+/// Opens the on-device database named `kobo`.
+///
+/// Web loads `sqlite3.wasm` and `drift_worker.js` from the app origin. Those
+/// files are the Drift web runtime for the pinned `drift` and `sqlite3`
+/// packages, so they ship with the app rather than being build output.
 QueryExecutor openKoboDatabase() {
   return driftDatabase(
     name: 'kobo',

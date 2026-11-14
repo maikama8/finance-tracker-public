@@ -23,32 +23,41 @@ import '../features/transactions/domain/ledger_transaction.dart';
 import '../features/transactions/domain/recurring_rule.dart';
 import '../features/transactions/domain/transaction_query.dart';
 
+/// Clock used for "today". Tests override this with [FixedClock].
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
 
+/// Ids for rows the user creates.
 final idSourceProvider = Provider<IdSource>((ref) => IdSource());
 
+/// Where the app should open. Native builds stay on Home.
 final launchLocationProvider = Provider<LaunchLocation>((ref) {
   return parseLaunchLocation(readBrowserLocation());
 });
 
+/// SQLite database. Closed when the provider is disposed.
 final databaseProvider = Provider<AppDatabase>((ref) {
   final database = AppDatabase();
   ref.onDispose(database.close);
   return database;
 });
 
+/// The ledger the running app reads and writes.
 final repositoryProvider = Provider<LedgerRepository>((ref) {
   return DriftLedgerRepository(ref.watch(databaseProvider));
 });
 
+/// Active exchange rates. The session starts on the offline table.
 final rateBookProvider = NotifierProvider<RateBook, ExchangeRateService>(
   RateBook.new,
 );
 
+/// Holds the rate source for this session.
 class RateBook extends Notifier<ExchangeRateService> {
   @override
   ExchangeRateService build() => const MockExchangeRateService();
 
+  /// Fetches live rates. Returns a message and keeps the previous table
+  /// when the feed cannot be used.
   Future<String?> useLiveRates() async {
     try {
       state = await HttpExchangeRateService.fetch();
@@ -58,15 +67,18 @@ class RateBook extends Notifier<ExchangeRateService> {
     }
   }
 
+  /// Drops a live table and returns to the offline fixtures.
   void useOffline() {
     state = const MockExchangeRateService();
   }
 }
 
+/// The open book. Loads the seed, posts due rules, then serves edits.
 final ledgerProvider = AsyncNotifierProvider<LedgerController, LedgerSnapshot>(
   LedgerController.new,
 );
 
+/// Loads the ledger and applies the edits the screens request.
 class LedgerController extends AsyncNotifier<LedgerSnapshot> {
   @override
   Future<LedgerSnapshot> build() async {
@@ -105,7 +117,8 @@ class LedgerController extends AsyncNotifier<LedgerSnapshot> {
     await _reload();
   }
 
-  Future<void> saveAccount(Account account, {required bool isNew}) async {
+  /// Inserts [account], or replaces the row with the same id.
+  Future<void> saveAccount(Account account) async {
     await ref.read(repositoryProvider).upsertAccount(account);
     await _reload();
   }
@@ -175,6 +188,7 @@ class LedgerController extends AsyncNotifier<LedgerSnapshot> {
   }
 }
 
+/// Light, dark, or system. A theme in the launch URL wins over the saved one.
 final themeModeProvider = Provider<ThemeMode>((ref) {
   final overrideTheme = ref.watch(launchLocationProvider).themeOverride;
   if (overrideTheme == ThemePreference.dark) return ThemeMode.dark;
@@ -187,6 +201,7 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
   };
 });
 
+/// Dashboard figures for the open ledger, or null while it is loading.
 final dashboardProvider = Provider<DashboardFigures?>((ref) {
   final ledger = ref.watch(ledgerProvider).asData?.value;
   if (ledger == null) return null;
@@ -201,10 +216,12 @@ final dashboardProvider = Provider<DashboardFigures?>((ref) {
   );
 });
 
+/// Selected shell tab. Changing it writes the web hash.
 final shellProvider = NotifierProvider<ShellController, int>(
   ShellController.new,
 );
 
+/// The selected tab, and the hash that should match it.
 class ShellController extends Notifier<int> {
   @override
   int build() => ref.read(launchLocationProvider).tab;
@@ -215,11 +232,13 @@ class ShellController extends Notifier<int> {
   }
 }
 
+/// Search and filters for the activity list.
 final transactionQueryProvider =
     NotifierProvider<TransactionQueryController, TransactionQuery>(
       TransactionQueryController.new,
     );
 
+/// The activity search box and its facets.
 class TransactionQueryController extends Notifier<TransactionQuery> {
   @override
   TransactionQuery build() => const TransactionQuery();
@@ -227,10 +246,12 @@ class TransactionQueryController extends Notifier<TransactionQuery> {
   void update(TransactionQuery query) => state = query;
 }
 
+/// The month shown on the budgets screen. Starts at the current month.
 final budgetMonthProvider = NotifierProvider<BudgetMonthController, DateTime>(
   BudgetMonthController.new,
 );
 
+/// Moves the budgets screen by calendar months.
 class BudgetMonthController extends Notifier<DateTime> {
   @override
   DateTime build() {

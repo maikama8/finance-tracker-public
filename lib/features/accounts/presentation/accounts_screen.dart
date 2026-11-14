@@ -5,10 +5,12 @@ import '../../../core/formatting/money_format.dart';
 import '../../../state/providers.dart';
 import '../../../ui/icons.dart';
 import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets.dart';
 import '../../dashboard/domain/ledger_report.dart';
 import '../domain/account.dart';
 import 'account_form_sheet.dart';
 
+/// Wallets, with a native balance and a base-currency estimate.
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
@@ -42,6 +44,12 @@ class AccountsScreen extends ConsumerWidget {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
+        if (active.isEmpty && archived.isEmpty)
+          const EmptyState(
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'No accounts yet',
+            message: 'Add a bank, a cash wallet, or mobile money.',
+          ),
         for (final account in active) ...<Widget>[
           _AccountCard(id: account.id),
           const SizedBox(height: 10),
@@ -79,9 +87,7 @@ class _AccountCard extends ConsumerWidget {
       from: account.currencyCode,
       to: base,
     );
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/currency/exchange_rate_service.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../state/providers.dart';
 import '../../../ui/icons.dart';
 import '../../../ui/theme/app_theme.dart';
 import '../../../ui/widgets.dart';
+import '../../accounts/domain/account.dart';
 import '../../dashboard/domain/ledger_report.dart';
 import '../../transactions/domain/ledger_transaction.dart';
 import 'dashboard_charts.dart';
 
+/// Net worth, wallets, charts, and the latest postings.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -114,9 +117,7 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     final netColor = figures.month.netMinor < 0
         ? AppColors.expense
         : AppColors.income;
@@ -239,57 +240,77 @@ class _Wallets extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         children: <Widget>[
           for (final account in accounts)
-            Container(
-              width: 180,
-              margin: const EdgeInsets.only(right: 10),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Icon(accountKindIcon(account.kind), size: 16),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              account.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        formatMinor(
-                          LedgerReport.balanceMinor(
-                            account,
-                            ledger.transactions,
-                          ),
-                          account.currencyCode,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      if (account.currencyCode != figures.baseCurrency)
-                        Text(
-                          '≈ ${formatMinor(rates.convertMinor(amountMinor: LedgerReport.balanceMinor(account, ledger.transactions), from: account.currencyCode, to: figures.baseCurrency), figures.baseCurrency)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+            _WalletCard(
+              account: account,
+              transactions: ledger.transactions,
+              rates: rates,
+              baseCurrency: figures.baseCurrency,
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _WalletCard extends StatelessWidget {
+  const _WalletCard({
+    required this.account,
+    required this.transactions,
+    required this.rates,
+    required this.baseCurrency,
+  });
+
+  final Account account;
+  final List<LedgerTransaction> transactions;
+  final ExchangeRateService rates;
+  final String baseCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    final balance = LedgerReport.balanceMinor(account, transactions);
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 10),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(accountKindIcon(account.kind), size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      account.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                formatMinor(balance, account.currencyCode),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              if (account.currencyCode != baseCurrency)
+                Text(
+                  '≈ ${formatMinor(rates.convertMinor(amountMinor: balance, from: account.currencyCode, to: baseCurrency), baseCurrency)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.mutedOf(context),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -340,12 +361,19 @@ class _Recent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ledger = ref.watch(ledgerProvider).asData?.value;
     if (ledger == null) return const SizedBox.shrink();
-    final recent = ledger.transactions.take(5);
+    final recent = ledger.transactions.take(5).toList(growable: false);
     return SectionCard(
       title: 'Recent',
-      child: Column(
-        children: <Widget>[for (final txn in recent) _RecentRow(txnId: txn.id)],
-      ),
+      child: recent.isEmpty
+          ? Text(
+              'Nothing posted yet.',
+              style: TextStyle(color: AppColors.mutedOf(context)),
+            )
+          : Column(
+              children: <Widget>[
+                for (final txn in recent) _RecentRow(txnId: txn.id),
+              ],
+            ),
     );
   }
 }
@@ -391,7 +419,10 @@ class _RecentRow extends ConsumerWidget {
                 Text(txn.note.isEmpty ? txn.kind.label : txn.note),
                 Text(
                   '${formatShortDate(txn.occurredOn)} · ${account?.name ?? ''}',
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.mutedOf(context),
+                  ),
                 ),
               ],
             ),
