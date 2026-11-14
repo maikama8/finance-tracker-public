@@ -1,10 +1,10 @@
-.PHONY: get analyze test web format
+.PHONY: get format analyze test web check
 
 get:
 	flutter pub get
 
 format:
-	dart format .
+	find lib test -name '*.dart' ! -name '*.g.dart' -print0 | xargs -0 dart format
 
 analyze:
 	flutter analyze
@@ -14,3 +14,5 @@ test:
 
 web:
 	flutter build web --release
+
+check: format analyze test

@@ -1,6 +1,7 @@
 import '../../../core/currency/currency.dart';
 import '../../../core/theme/theme_preference.dart';
 
+/// Preferences stored with the ledger.
 class AppSettings {
   const AppSettings({
     this.baseCurrencyCode = Currencies.defaultBase,

@@ -12,6 +12,7 @@ import '../../features/transactions/presentation/transaction_form_sheet.dart';
 import '../../features/transactions/presentation/transactions_screen.dart';
 import '../../state/providers.dart';
 
+/// Navigation shell. Wide windows use a rail. Narrow windows use a bar.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key});
 
@@ -28,11 +29,13 @@ class AppShell extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
+                const Icon(Icons.error_outline, size: 36),
+                const SizedBox(height: 12),
                 Text(
                   'The ledger could not be opened.\n$error',
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => ref.invalidate(ledgerProvider),
                   child: const Text('Try again'),

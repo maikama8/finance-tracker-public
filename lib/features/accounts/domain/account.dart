@@ -1,5 +1,7 @@
+/// Where an account's money sits.
 enum AccountKind { cash, bank, mobileMoney }
 
+/// Reads the kind stored on an account row.
 AccountKind parseAccountKind(String value) {
   return switch (value) {
     'cash' => AccountKind.cash,

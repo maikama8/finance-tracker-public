@@ -8,6 +8,7 @@ import '../../../core/theme/theme_preference.dart';
 import '../../../state/providers.dart';
 import '../../../ui/theme/app_theme.dart';
 
+/// Theme, base currency, the rate table, and the demo reset.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -18,9 +19,7 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ledger.settings;
     final rates = ref.watch(rateBookProvider);
     final live = rates is! MockExchangeRateService;
-    final muted = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkMuted
-        : AppColors.muted;
+    final muted = AppColors.mutedOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: <Widget>[

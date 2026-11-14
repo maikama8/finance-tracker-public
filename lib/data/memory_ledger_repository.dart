@@ -40,7 +40,10 @@ class MemoryLedgerRepository implements LedgerRepository {
       existingIds: _transactions.map((txn) => txn.id).toSet(),
       until: today,
     );
-    if (posting.created.isEmpty && !_rulesMoved(posting.rules)) return;
+    if (posting.created.isEmpty &&
+        !RecurringSchedule.materializationChanged(_rules, posting.rules)) {
+      return;
+    }
     _transactions.addAll(posting.created);
     _rules
       ..clear()
@@ -187,16 +190,5 @@ class MemoryLedgerRepository implements LedgerRepository {
     _budgets
       ..clear()
       ..addAll(snapshot.budgets);
-  }
-
-  bool _rulesMoved(List<RecurringRule> next) {
-    if (next.length != _rules.length) return true;
-    for (var i = 0; i < next.length; i++) {
-      if (next[i].id != _rules[i].id) return true;
-      if (next[i].lastMaterializedOn != _rules[i].lastMaterializedOn) {
-        return true;
-      }
-    }
-    return false;
   }
 }

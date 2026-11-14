@@ -3,6 +3,7 @@ import 'category.dart';
 import '../../accounts/domain/account.dart';
 import 'ledger_transaction.dart';
 
+/// Search text and optional facets for the activity list.
 class TransactionQuery {
   const TransactionQuery({
     this.text = '',
@@ -20,6 +21,7 @@ class TransactionQuery {
   final DateTime? from;
   final DateTime? to;
 
+  /// True when the list is not the full book.
   bool get isNarrowed =>
       text.trim().isNotEmpty ||
       kind != null ||
@@ -27,6 +29,10 @@ class TransactionQuery {
       categoryId != null ||
       from != null ||
       to != null;
+
+  /// True when a facet other than the search box and the kind chips is set.
+  bool get hasFacet =>
+      accountId != null || categoryId != null || from != null || to != null;
 
   TransactionQuery copyWith({
     String? text,
@@ -52,6 +58,10 @@ class TransactionQuery {
   }
 }
 
+/// Transactions that match [query], newest first.
+///
+/// An account facet matches the source account and the transfer destination.
+/// Search looks at the note, account names, category name, currency, and amount.
 List<LedgerTransaction> filterTransactions({
   required List<LedgerTransaction> transactions,
   required List<Account> accounts,

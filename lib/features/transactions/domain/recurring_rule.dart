@@ -1,8 +1,10 @@
 import '../../../core/time/iso_date.dart';
 import 'ledger_transaction.dart';
 
+/// How far a rule steps between occurrences.
 enum RecurrenceFrequency { weekly, monthly, yearly }
 
+/// Reads the frequency stored on a rule row.
 RecurrenceFrequency parseRecurrenceFrequency(String value) {
   return switch (value) {
     'weekly' => RecurrenceFrequency.weekly,
@@ -205,6 +207,32 @@ class RecurringSchedule {
     return ScheduledPosting(created: created, rules: updated);
   }
 
+  /// True when [next] is not the same rules with the same cursors.
+  ///
+  /// Order does not matter. A run that created nothing and moved no cursor
+  /// can skip writing the rules back.
+  static bool materializationChanged(
+    List<RecurringRule> current,
+    List<RecurringRule> next,
+  ) {
+    if (current.length != next.length) return true;
+    final cursors = <String, DateTime?>{
+      for (final rule in current)
+        rule.id: rule.lastMaterializedOn == null
+            ? null
+            : dateOnly(rule.lastMaterializedOn!),
+    };
+    if (cursors.length != current.length) return true;
+    for (final rule in next) {
+      if (!cursors.containsKey(rule.id)) return true;
+      final updated = rule.lastMaterializedOn == null
+          ? null
+          : dateOnly(rule.lastMaterializedOn!);
+      if (cursors[rule.id] != updated) return true;
+    }
+    return false;
+  }
+
   static LedgerTransaction _post(RecurringRule rule, DateTime date, String id) {
     return LedgerTransaction(
       id: id,
@@ -273,6 +301,7 @@ class RecurringSchedule {
   }
 }
 
+/// Transactions created by one materialization pass, and the rules after it.
 class ScheduledPosting {
   const ScheduledPosting({required this.created, required this.rules});
 

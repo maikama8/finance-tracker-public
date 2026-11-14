@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Palette shared by the light theme, the dark theme, and the charts.
 class AppColors {
   const AppColors._();
 
@@ -18,8 +19,14 @@ class AppColors {
   static const darkLine = Color(0xFF2C3B34);
   static const darkMuted = Color(0xFFA8B5AE);
   static const onDark = Color(0xFFF4F1EA);
+
+  /// Secondary text for the brightness of [context].
+  static Color mutedOf(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? darkMuted : muted;
+  }
 }
 
+/// Light and dark [ThemeData] for Kobo.
 class AppTheme {
   const AppTheme._();
 

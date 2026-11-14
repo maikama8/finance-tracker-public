@@ -5,6 +5,7 @@ import '../../ledger/domain/ledger_snapshot.dart';
 import '../../transactions/domain/category.dart';
 import '../../transactions/domain/ledger_transaction.dart';
 
+/// One CSV row the importer refused.
 class CsvRowError {
   const CsvRowError({required this.line, required this.message});
 
@@ -13,6 +14,7 @@ class CsvRowError {
   final String message;
 }
 
+/// What an import would write, plus the rows it skipped or refused.
 class CsvImportPlan {
   const CsvImportPlan({
     required this.accounts,

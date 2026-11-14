@@ -12,12 +12,19 @@ import '../features/transactions/domain/recurring_rule.dart';
 /// The Drift implementation is what the app opens. Tests use the in-memory
 /// implementation. Both apply the same seed and the same recurring schedule.
 abstract class LedgerRepository {
+  /// The book as it is stored now.
   Future<LedgerSnapshot> load();
 
+  /// Writes the demo book once. Later calls leave the user's data alone.
   Future<void> ensureSeeded(DateTime today);
 
+  /// Posts recurring rules that are due on or before [today].
+  ///
+  /// Safe to call again: an occurrence id is stable, and a deleted occurrence
+  /// on or before the cursor is not recreated.
   Future<void> materializeRecurring(DateTime today);
 
+  /// Replaces the book with a fresh demo, then posts rules due by [today].
   Future<void> restoreDemo(DateTime today);
 
   Future<void> saveSettings(AppSettings settings);

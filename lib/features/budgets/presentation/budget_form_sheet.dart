@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatting/money_format.dart';
 import '../../../state/providers.dart';
+import '../../../ui/widgets.dart';
 import '../../transactions/domain/category.dart';
 import '../domain/category_budget.dart';
 
+/// Opens the sheet for a new budget, or the budget with [budgetId].
 Future<void> showBudgetForm(BuildContext context, {String? budgetId}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -16,6 +18,7 @@ Future<void> showBudgetForm(BuildContext context, {String? budgetId}) {
   );
 }
 
+/// Create or edit one monthly category limit.
 class BudgetFormSheet extends ConsumerStatefulWidget {
   const BudgetFormSheet({this.budgetId, super.key});
 
@@ -36,7 +39,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     final ledger = ref.read(ledgerProvider).asData?.value;
     final existing = _existing(ledger?.budgets);
     _amount = TextEditingController(
-      text: existing == null ? '' : _major(existing.limitMinor),
+      text: existing == null ? '' : formatEditableAmount(existing.limitMinor),
     );
     _categoryId = existing?.categoryId;
   }
@@ -107,7 +110,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
           ),
           if (_error != null) ...<Widget>[
             const SizedBox(height: 8),
-            Text(_error!),
+            FieldError(_error!),
           ],
           const SizedBox(height: 16),
           FilledButton(
@@ -144,10 +147,4 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
       ),
     );
   }
-}
-
-String _major(int minor) {
-  final fraction = minor % 100;
-  if (fraction == 0) return '${minor ~/ 100}';
-  return '${minor ~/ 100}.${fraction.toString().padLeft(2, '0')}';
 }

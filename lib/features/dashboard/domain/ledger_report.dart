@@ -6,6 +6,7 @@ import '../../budgets/domain/category_budget.dart';
 import '../../transactions/domain/category.dart';
 import '../../transactions/domain/ledger_transaction.dart';
 
+/// Income and spending for one calendar month, in the base currency.
 class MonthCashFlow {
   const MonthCashFlow({
     required this.month,
@@ -20,6 +21,7 @@ class MonthCashFlow {
   int get netMinor => incomeMinor - expenseMinor;
 }
 
+/// One expense category's total for a month, in the base currency.
 class CategorySpend {
   const CategorySpend({
     required this.categoryId,
@@ -36,6 +38,7 @@ class CategorySpend {
   final int spentMinor;
 }
 
+/// Net worth at the close of one month, in the base currency.
 class NetWorthPoint {
   const NetWorthPoint({required this.month, required this.minor});
 
@@ -216,6 +219,7 @@ class LedgerReport {
   }
 }
 
+/// The numbers the dashboard draws for one open day.
 class DashboardFigures {
   const DashboardFigures({
     required this.baseCurrency,
@@ -240,6 +244,7 @@ class DashboardFigures {
   List<BudgetSnapshot> get alerts =>
       budgets.where((budget) => budget.isOver).toList(growable: false);
 
+  /// Builds every figure the dashboard needs from one snapshot.
   static DashboardFigures compose({
     required List<Account> accounts,
     required List<Category> categories,

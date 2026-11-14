@@ -1,3 +1,4 @@
+import 'package:finance_tracker/core/currency/exchange_rate_service.dart';
 import 'package:finance_tracker/core/currency/http_exchange_rate_service.dart';
 import 'package:finance_tracker/core/currency/mock_exchange_rate_service.dart';
 import 'package:finance_tracker/core/currency/scaled_rate_table.dart';
@@ -77,7 +78,50 @@ void main() {
     );
     expect(
       () => ScaledRateTable.parseOpenErApi('{"result":"error"}'),
-      throwsA(isA<Exception>()),
+      throwsA(isA<ExchangeRateException>()),
     );
   });
+
+  test(
+    'a failed rate feed reports a message and does not throw a raw error',
+    () async {
+      final down = MockClient((request) async => http.Response('no', 503));
+      expect(
+        () => HttpExchangeRateService.fetch(client: down),
+        throwsA(
+          isA<ExchangeRateException>().having(
+            (error) => error.message,
+            'message',
+            contains('503'),
+          ),
+        ),
+      );
+
+      final garbage = MockClient((request) async => http.Response('nope', 200));
+      expect(
+        () => HttpExchangeRateService.fetch(client: garbage),
+        throwsA(isA<ExchangeRateException>()),
+      );
+
+      final unreachable = MockClient(
+        (request) async => throw http.ClientException('down'),
+      );
+      expect(
+        () => HttpExchangeRateService.fetch(client: unreachable),
+        throwsA(isA<ExchangeRateException>()),
+      );
+
+      final slow = MockClient((request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        return http.Response('{}', 200);
+      });
+      expect(
+        () => HttpExchangeRateService.fetch(
+          client: slow,
+          timeout: const Duration(milliseconds: 5),
+        ),
+        throwsA(isA<ExchangeRateException>()),
+      );
+    },
+  );
 }
